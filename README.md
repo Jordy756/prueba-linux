@@ -347,15 +347,15 @@ services:
   postgres:
     image: postgres:16-alpine
     container_name: postgres-dotnet-api
+    restart: always 
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres  # CAMBIÁ ESTA CLAVE POR UNA SEGURA
+      POSTGRES_PASSWORD: postgres
       POSTGRES_DB: MiApiDb
     ports:
-      - "5432:5432"
+      - "5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    restart: unless-stopped
 
 volumes:
   postgres_data:
@@ -381,7 +381,7 @@ Copiá esto en tu archivo `MiApi.Api/appsettings.json` para Postgres (cambiá el
 ```json
 {
   "ConnectionStrings": {
-    "DefaultConnection": "Host=localhost;Port=5432;Database=MiApiDb;Username=postgres;Password=postgres;Include Error Detail=true"
+    "DefaultConnection": "Host=localhost;Port=5433;Database=MiApiDb;Username=postgres;Password=postgres;Include Error Detail=true"
   }
 }
 ```
