@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using MiApi.Domain.Entities;
 
 namespace MiApi.Infrastructure.Data
 {
@@ -8,7 +9,6 @@ namespace MiApi.Infrastructure.Data
         {
         }
 
-        // Ejemplo de DbSet (Reemplazá con tus entidades de Domain)
-        // public virtual DbSet<TuEntidad> TusEntidades { get; set; }
+        public DbSet<User> Users { get; set; }
     }
 }
