@@ -82,14 +82,24 @@ dotnet new webapi -n MiApi.Api --no-https
 
 ---
 
-### Paso 4: Agregar Entity Framework Core
+### Paso 4: Agregar Entity Framework Core (Elegí tu DB)
 
-Para que la capa de Infraestructura pueda usar EF Core (ORM para base de datos):
+Para que la capa de Infraestructura pueda usar EF Core (ORM), elegí el proveedor según tu base de datos:
 
 ```bash
-# Proveedor de SQL Server (cambiá por SQLite/PostgreSQL si usás otro)
+# 1. SQL Server (Atrévete a cambiar a Postgres, hermano)
 dotnet add MiApi.Infrastructure/ package Microsoft.EntityFrameworkCore.SqlServer
-# Herramientas para migraciones
+
+# 2. PostgreSQL (La mejor opción para Linux - ¡Recomendada!)
+dotnet add MiApi.Infrastructure/ package Npgsql.EntityFrameworkCore.PostgreSQL
+
+# 3. MySQL (Si tenés un hosting que lo requiera)
+dotnet add MiApi.Infrastructure/ package Pomelo.EntityFrameworkCore.MySql
+
+# 4. MongoDB (No relacional - No usa EF Core estándar, pero por si acaso)
+dotnet add MiApi.Infrastructure/ package MongoDB.EntityFrameworkCore
+
+# Herramientas para migraciones (Necesario para todos)
 dotnet add MiApi.Infrastructure/ package Microsoft.EntityFrameworkCore.Design
 ```
 
@@ -103,7 +113,7 @@ dotnet add MiApi.Api/ package Scalar.AspNetCore
 
 ---
 
-### Paso 5: Linkear proyectos (referencias y solución)
+### Paso 6: Linkear proyectos (referencias y solución)
 
 #### Agregar todos los proyectos a la solución
 
@@ -131,7 +141,7 @@ dotnet add MiApi.Api/ reference MiApi.Infrastructure/
 
 ---
 
-### Paso 6: Abrir en VS Code
+### Paso 7: Abrir en VS Code
 
 ```bash
 cd MiApi.Api && code .
@@ -139,13 +149,13 @@ cd MiApi.Api && code .
 
 ---
 
-### Paso 7: Levantar la App con Hot Reload (dotnet watch)
+### Paso 8: Levantar la App con Hot Reload (dotnet watch)
 
-Para correr la API con recarga automática al guardar cambios (hot reload), **tenés que estar dentro de la carpeta de la API**. Si usaste el script con `PROJECT_NAME="test"`, tu carpeta de API es `test.Api` (no la genérica `MiApi.Api`):
+Para correr la API con recarga automática al guardar cambios (hot reload), **tenés que estar dentro de la carpeta de la API**. Si usaste el script con `PROJECT_NAME="MiApi"`:
 
 ```bash
 # Entrar a la carpeta correcta de tu API
-cd test.Api  # Cambiá por el nombre de tu API si es distinto
+cd MiApi.Api  # Cambiá por el nombre de tu API si es distinto
 # Levantar con hot reload
 dotnet watch
 ```
@@ -158,7 +168,29 @@ dotnet watch
 
 ---
 
-## 2. Script todo-en-uno (ejecutar todo de una vez)
+## 2. Comandos para crear Controladores (Scaffolding)
+
+A diferencia de las clases de Dominio que se crean manualmente en VS Code, los **Controladores** sí tienen un comando oficial en .NET para generarlos con la estructura base (`[ApiController]`, `ControllerBase`, etc.).
+
+```bash
+# Sintaxis: dotnet new apicontroller -n NombreController -o Ruta/Controllers/
+# Ejemplo real para nuestro proyecto:
+dotnet new apicontroller -n ProductosController -o MiApi.Api/Controllers/
+```
+
+**¿Qué hace?** Crea el archivo `.cs` del controlador con el "boilerplate" necesario (`[ApiController]`, `ControllerBase`, etc.) para que la API funcione correctamente y reconozca las rutas.
+
+### ⚠️ Nota Importante: Clases Normales
+
+**NO EXISTE** un comando `dotnet new` para crear una clase simple (ej. `Producto.cs` o `IRepository.cs`).
+
+- El CLI de .NET solo scaffolda **proyectos completos** o **archivos de framework** (Controllers, Razor Pages).
+- Para tus Entidades, DTOs e Interfaces: **Usá VS Code** (File > New File) o escribí el archivo con `cat > ...` si estás automatizando scripts.
+- Si corrés `dotnet new list`, vas a confirmar que no hay plantilla "class" ni "interface". ¡Es así de claro!
+
+---
+
+## 3. Script todo-en-uno (ejecutar todo de una vez)
 
 Copiá y pegá este bloque en tu terminal, cambiá el nombre del proyecto si querés (variable `PROJECT_NAME`):
 
@@ -179,8 +211,8 @@ dotnet new classlib -n ${PROJECT_NAME}.Infrastructure
 # Crear API
 dotnet new webapi -n ${PROJECT_NAME}.Api --no-https
 
-# Agregar EF Core a Infraestructura
-dotnet add ${PROJECT_NAME}.Infrastructure/ package Microsoft.EntityFrameworkCore.SqlServer
+# Agregar EF Core a Infraestructura (PostgreSQL - Mejor para Linux)
+dotnet add ${PROJECT_NAME}.Infrastructure/ package Npgsql.EntityFrameworkCore.PostgreSQL
 dotnet add ${PROJECT_NAME}.Infrastructure/ package Microsoft.EntityFrameworkCore.Design
 
 # Agregar Scalar UI a la API (reemplazo moderno de Swagger)
@@ -214,7 +246,7 @@ mkdir -p ${PROJECT_NAME}.Application/Queries
 mkdir -p ${PROJECT_NAME}.Application/Validators
 
 # Infrastructure (Adaptadores y Datos)
-mkdir -p ${PROJECT_NAME}.Infrastructure/Data/Configurations
+mkdir -p ${PROJECT_NAME}.Infrastructure/Data/
 mkdir -p ${PROJECT_NAME}.Infrastructure/Adapters
 mkdir -p ${PROJECT_NAME}.Infrastructure/Services
 
@@ -293,5 +325,108 @@ echo "¡Listo! Abrí VS Code con: cd ${PROJECT_NAME}.Api && code ."
 ## Notas importantes
 
 - Si usás otra base de datos (ej. PostgreSQL), reemplazá `SqlServer` por `Npgsql` en el paquete de EF Core.
-- La estructura de capas (Domain/Application/Infrastructure) es Clean Architecture básica: te va a ahorrar dolores de cabeza después cuando la app crezca.
+- La estructura de capas (Domain/Application/Infrastructure) es **Arquitectura Hexagonal Pura**:
+  - **Domain/Ports**: Donde se definen los contratos (interfaces).
+  - **Infrastructure/Adapters**: Donde se implementan esos contratos (ej. Repositorios con EF Core).
+  - **Api**: Es un "Input Adapter" que recibe HTTP y usa los controladores.
+- **No uses carpetas como `MiApi.Api/Models`**. Los DTOs van en `Application/DTOs` y las Entidades en `Domain/Entities`.
 - ¿Se entiende? ¡Dale, probalo y me contás!
+
+---
+
+## 4. Base de Datos con Docker (PostgreSQL)
+
+Para un desarrollo en Linux, **PostgreSQL es la mejor opción** (liviano y potente). Acá tenés el `docker-compose.yaml` actualizado:
+
+### docker-compose.yaml
+
+El archivo ya fue creado en la raíz del proyecto (`docker-compose.yaml`). Contenido:
+
+```yaml
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: postgres-dotnet-api
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres  # CAMBIÁ ESTA CLAVE POR UNA SEGURA
+      POSTGRES_DB: MiApiDb
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+```
+
+### Comandos de Docker
+
+```bash
+# Levantar la base de datos en segundo plano
+docker compose up -d
+
+# Ver logs (por si falla)
+docker compose logs -f
+
+# Bajar el servicio
+docker compose down
+```
+
+### Cadena de Conexión (Connection String)
+
+Copiá esto en tu archivo `MiApi.Api/appsettings.json` para Postgres (cambiá el `Password` por el que pusiste en el yaml):
+
+```json
+{
+  "ConnectionStrings": {
+    "DefaultConnection": "Host=localhost;Port=5432;Database=MiApiDb;Username=postgres;Password=postgres;Include Error Detail=true"
+  }
+}
+```
+
+### Nota sobre otros motores (Comandos en Paso 4)
+
+Si querés usar otro motor, recordá que en el **Paso 4** del README listamos los comandos para instalar los proveedores de:
+
+- **SQL Server**: `dotnet add package Microsoft.EntityFrameworkCore.SqlServer`
+- **PostgreSQL**: `dotnet add package Npgsql.EntityFrameworkCore.PostgreSQL` (El que usamos ahora)
+- **MySQL**: `dotnet add package Pomelo.EntityFrameworkCore.MySql`
+- **MongoDB**: `dotnet add package MongoDB.EntityFrameworkCore`
+
+## 5. Configurar el DbContext (Infraestructura)
+
+Basado en tu ejemplo, acá tenés la estructura para el `ApplicationDbContext.cs`. Guardalo en `MiApi.Infrastructure/Data/ApplicationDbContext.cs`.
+
+```csharp
+using Microsoft.EntityFrameworkCore;
+// Usá el namespace que corresponde a tus entidades (ej. MiApi.Domain.Entities)
+// using MiApi.Domain.Entities;
+
+namespace MiApi.Infrastructure.Data
+{
+    public class ApplicationDbContext : DbContext
+    {
+        // Constructor: Recibe las opciones (ej. UseNpgsql) inyectadas desde Program.cs
+        public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options)
+        {
+        }
+
+        // Ejemplo de DbSet (Reemplazá 'TuEntidad' con tus clases reales de Domain)
+        // public virtual DbSet<TuEntidad> TusEntidades { get; set; }
+        
+        // Configuración adicional (Fluent API) si la necesitás:
+        // protected override void OnModelCreating(ModelBuilder modelBuilder) 
+        // {
+        //     base.OnModelCreating(modelBuilder);
+        // }
+    }
+}
+```
+
+**¿Qué hace?**
+
+- Hereda de `DbContext` (EF Core).
+- El constructor inyecta la configuración de la base de datos (cadena de conexión) que se define en `Program.cs`.
+- Usamos `virtual` en los `DbSet` (como en tu ejemplo) por si querés soporte para **Lazy Loading** en el futuro, aunque para una API REST básica no es estrictamente necesario.
